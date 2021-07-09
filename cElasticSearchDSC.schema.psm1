@@ -10,6 +10,9 @@ Configuration cElasticSearchDSC
 
         [Parameter(Mandatory = $True)] 
         [System.IO.FileInfo] $ElasticSourcePath,
+        
+        [Parameter(Mandatory = $True)] 
+        [String] $ElasticSearchNodeName,
 
         [ValidateNotNullOrEmpty()] 
         [System.IO.FileInfo] $JREDestinationPath = "$Env:ProgramFiles\Java\jre8",
@@ -114,7 +117,7 @@ Configuration cElasticSearchDSC
         Contents        = 
         "path.data: $ElasticDataPath
 path.logs: $ElasticLogPath
-node.name: $($Node.NodeName)
+node.name: $ElasticSearchNodeName
 network.host: _site_
 "
         DependsOn       = "[Archive]ElasticSearch"
@@ -170,26 +173,24 @@ network.host: _site_
             {
                 $batPath = Join-Path $Using:elasticDestinationPath "bin/elasticsearch-service.bat"
 
-                if ($using:Ensure -eq 'Present')
+                $process = Start-Process -FilePath $batPath -ArgumentList "install" -PassThru -WindowStyle Hidden -Wait
+                if ($process.ExitCode -ne 0)
                 {
-                    $process = Start-Process -FilePath $batPath -ArgumentList "install" -PassThru -WindowStyle Hidden -Wait
-                    if ($process.ExitCode -ne 0)
-                    {
-                        Write-Error "ElasticSearch Service installation completed with errors (exit code $($process.ExitCode))"
-                    }
-                    else
-                    {
-                        Write-Verbose "ElasticSearch Service installation completed successfully (exit code $($process.ExitCode))"
-                    }
-                    $start = Start-Process -FilePath $batPath -ArgumentList "start" -PassThru -WindowStyle Hidden -Wait
-                    if ($start.ExitCode -ne 0)
-                    {
-                        Write-Error "ElasticSearch Service started with errors (exit code $($start.ExitCode))"
-                    }
-                    else
-                    {
-                        Write-Verbose "ElasticSearch Service started successfully (exit code $($start.ExitCode))"
-                    }
+                    Write-Error "ElasticSearch Service installation completed with errors (exit code $($process.ExitCode))"
+                }
+                else
+                {
+                    Write-Verbose "ElasticSearch Service installation completed successfully (exit code $($process.ExitCode))"
+                }
+
+                $start = Start-Process -FilePath $batPath -ArgumentList "start" -PassThru -WindowStyle Hidden -Wait
+                if ($start.ExitCode -ne 0)
+                {
+                    Write-Error "ElasticSearch Service started with errors (exit code $($start.ExitCode))"
+                }
+                else
+                {
+                    Write-Verbose "ElasticSearch Service started successfully (exit code $($start.ExitCode))"
                 }
             }
         }
